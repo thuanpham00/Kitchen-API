@@ -45,7 +45,8 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
       const { data, pagination } = await getDishList({
         page: request.query.page || 1,
         limit: request.query.limit || 5,
-        name: request.query.name
+        name: request.query.name,
+        categoryId: request.query.categoryId
       })
       reply.send({
         data: data as DishListResType['data'],

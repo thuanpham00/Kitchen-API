@@ -1,11 +1,17 @@
 import prisma from '@/database'
 import { CreateDishBodyType, DishQueryType, UpdateDishBodyType } from '@/schemaValidations/dish.schema'
 
-export const getDishList = async ({ page, limit, name }: DishQueryType) => {
+export const getDishList = async ({ page, limit, name, categoryId }: DishQueryType) => {
   const skip = (page - 1) * limit
 
   const whereCondition = name
     ? { name: { contains: name } } // ← Bỏ mode: 'insensitive'
+    : {}
+
+  const whereCategoryId = categoryId
+    ? {
+        categoryId: Number(categoryId)
+      }
     : {}
 
   const [dishes, total] = await Promise.all([
@@ -16,10 +22,16 @@ export const getDishList = async ({ page, limit, name }: DishQueryType) => {
       include: {
         category: true
       },
-      where: whereCondition // ← Dùng chung
+      where: {
+        ...whereCondition,
+        ...whereCategoryId
+      }
     }),
     prisma.dish.count({
-      where: whereCondition // ← Đếm theo điều kiện
+      where: {
+        ...whereCondition,
+        ...whereCategoryId
+      }
     })
   ])
 
@@ -57,13 +69,26 @@ export const getDishDetail = (id: number) => {
   return prisma.dish.findUniqueOrThrow({
     where: {
       id
+    },
+    include: {
+      category: true
     }
   })
 }
 
 export const createDish = (data: CreateDishBodyType) => {
   return prisma.dish.create({
-    data
+    data: {
+      name: data.name,
+      price: data.price,
+      description: data.description,
+      image: data.image,
+      status: data.status,
+      categoryId: Number(data.categoryId)
+    },
+    include: {
+      category: true
+    }
   })
 }
 
@@ -72,7 +97,13 @@ export const updateDish = (id: number, data: UpdateDishBodyType) => {
     where: {
       id
     },
-    data
+    data: {
+      ...data,
+      categoryId: data.categoryId ? Number(data.categoryId) : undefined
+    },
+    include: {
+      category: true
+    }
   })
 }
 
@@ -80,6 +111,9 @@ export const deleteDish = (id: number) => {
   return prisma.dish.delete({
     where: {
       id
+    },
+    include: {
+      category: true
     }
   })
 }

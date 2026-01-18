@@ -13,7 +13,7 @@ export const DishCategorySchema = z.object({
   id: z.number(),
   name: z.string(),
   description: z.string().nullable(),
-  countDish: z.number(),
+  countDish: z.number().optional(),
   createdAt: z.date(),
   updatedAt: z.date()
 })
@@ -32,3 +32,33 @@ export const DishCategoryListRes = z.object({
 })
 
 export type DishCategoryListResType = z.TypeOf<typeof DishCategoryListRes>
+
+export const DishCategoryNameSchema = z.object({
+  id: z.number(),
+  name: z.string()
+})
+
+export type DishCategoryNameResType = z.TypeOf<typeof DishCategoryNameSchema>
+
+export const DishCategoryNameListRes = z.object({
+  data: z.array(DishCategoryNameSchema), // ← Array thay vì object
+  message: z.string()
+})
+
+export type DishCategoryNameListResType = z.TypeOf<typeof DishCategoryNameListRes>
+
+export const CreateDishCategoryBody = z.object({
+  name: z.string().min(5).max(256),
+  description: z.string().max(10000)
+})
+
+export type CreateDishCategoryBodyType = z.TypeOf<typeof CreateDishCategoryBody>
+
+export const UpdateDishCategoryBody = CreateDishCategoryBody
+
+export type UpdateDishCategoryBodyType = z.TypeOf<typeof UpdateDishCategoryBody>
+
+export const DishCategoryParams = z.object({
+  id: z.coerce.number()
+})
+export type DishCategoryParamsType = z.TypeOf<typeof DishCategoryParams>

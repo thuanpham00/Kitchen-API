@@ -1,5 +1,9 @@
 import prisma from '@/database'
-import { DishCategoryQueryType } from '@/schemaValidations/dishCategory.schema'
+import {
+  CreateDishCategoryBodyType,
+  DishCategoryQueryType,
+  UpdateDishCategoryBodyType
+} from '@/schemaValidations/dishCategory.schema'
 
 export const getDishCategoryList = async ({ page, limit, name }: DishCategoryQueryType) => {
   const skip = (page - 1) * limit
@@ -10,7 +14,9 @@ export const getDishCategoryList = async ({ page, limit, name }: DishCategoryQue
 
   const [categories, total] = await Promise.all([
     prisma.dishCategory.findMany({
-      orderBy: { id: 'asc' },
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
       include: {
         _count: {
           select: { dishes: true }
@@ -18,7 +24,7 @@ export const getDishCategoryList = async ({ page, limit, name }: DishCategoryQue
       },
       where: whereCondition // ← Dùng chung
     }),
-    prisma.dish.count({
+    prisma.dishCategory.count({
       where: whereCondition // ← Đếm theo điều kiện
     })
   ])
@@ -39,4 +45,68 @@ export const getDishCategoryList = async ({ page, limit, name }: DishCategoryQue
       totalPages: Math.ceil(total / limit)
     }
   }
+}
+
+export const getListNameDishCategory = async () => {
+  const categories = await prisma.dishCategory.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: 'desc' }
+  })
+  return categories
+}
+
+export const createDishCategory = async (data: CreateDishCategoryBodyType) => {
+  const category = await prisma.dishCategory.create({
+    data,
+    include: {
+      _count: {
+        select: { dishes: true }
+      }
+    }
+  })
+
+  return {
+    id: category.id,
+    name: category.name,
+    description: category.description,
+    countDish: category._count.dishes,
+    createdAt: category.createdAt,
+    updatedAt: category.updatedAt
+  }
+}
+
+export const getDishCategoryDetail = (id: number) => {
+  return prisma.dishCategory.findUniqueOrThrow({
+    where: {
+      id
+    }
+  })
+}
+
+export const updateDishCategory = (id: number, data: UpdateDishCategoryBodyType) => {
+  return prisma.dishCategory.update({
+    where: {
+      id
+    },
+    data
+  })
+}
+
+export const deleteDishCategory = async (id: number) => {
+  // Kiểm tra danh mục có món ăn không
+  const dishCount = await prisma.dish.count({
+    where: {
+      categoryId: id
+    }
+  })
+
+  if (dishCount > 0) {
+    throw new Error(`Không thể xóa danh mục này vì còn ${dishCount} món ăn đang thuộc danh mục`)
+  }
+
+  return prisma.dishCategory.delete({
+    where: {
+      id
+    }
+  })
 }
