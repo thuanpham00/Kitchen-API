@@ -24,6 +24,7 @@ import { socketPlugin } from '@/plugins/socket.plugins'
 import indicatorRoutes from '@/routes/indicator.route'
 import autoRemoveRefreshTokenJob from '@/jobs/autoRemoveRefreshToken.job'
 import categoryRoutes from '@/routes/category.route'
+import menusRoutes from '@/routes/menu.route'
 
 const fastify = Fastify({
   logger: false
@@ -74,6 +75,9 @@ const start = async () => {
     })
     fastify.register(categoryRoutes, {
       prefix: '/dish-categories'
+    })
+    fastify.register(menusRoutes, {
+      prefix: '/menus'
     })
     fastify.register(tablesRoutes, {
       prefix: '/tables'

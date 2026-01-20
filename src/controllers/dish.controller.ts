@@ -1,7 +1,21 @@
 import prisma from '@/database'
 import { CreateDishBodyType, DishQueryType, UpdateDishBodyType } from '@/schemaValidations/dish.schema'
 
-export const getDishList = async ({ page, limit, name, categoryId }: DishQueryType) => {
+export const getDishList = async ({ page, limit, name, categoryId, pagination }: DishQueryType) => {
+  console.log(pagination)
+  if (pagination === 'false') {
+    const dishes = await prisma.dish.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        category: true
+      }
+    })
+    return {
+      data: dishes,
+      pagination: null
+    }
+  }
+
   const skip = (page - 1) * limit
 
   const whereCondition = name

@@ -5,7 +5,8 @@ import z from 'zod'
 export const DishQuery = BaseQuery.and(
   z.object({
     name: z.string().trim().max(256).optional(),
-    categoryId: z.string().optional()
+    categoryId: z.string().optional(),
+    pagination: z.string().optional()
   })
 )
 
@@ -53,7 +54,7 @@ export type DishResType = z.TypeOf<typeof DishRes>
 export const DishListRes = z.object({
   data: z.array(DishSchema),
   message: z.string(),
-  pagination: PaginationRes
+  pagination: PaginationRes.nullable()
 })
 
 export type DishListResType = z.TypeOf<typeof DishListRes>

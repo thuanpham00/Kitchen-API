@@ -46,3 +46,5 @@ export const OrderStatusValues = [
 ] as const
 
 export const ManagerRoom = 'manager' as const
+
+export const MenuItemStatusValues = ['AVAILABLE', 'OUT_OF_STOCK', 'HIDDEN'] as const
