@@ -44,8 +44,7 @@ model Dish {
   price         Int
   description   String
   image         String
-  status        String         @default("Available")
-  dishSnapshots DishSnapshot[]
+  status        String         @default("Active")
   menuItems     MenuItem[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -60,8 +59,8 @@ model DishSnapshot {
   description String
   image       String
   status      String   @default("Available")
-  dishId      Int?
-  dish        Dish?    @relation(fields: [dishId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  menuItemId  Int?
+  menuItem    MenuItem?    @relation(fields: [menuItemId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
   order       Order?
@@ -129,7 +128,7 @@ model Menu {
   name        String
   description String?
   version     Int
-  isActive    Boolean
+  isActive    Boolean // Chỉ có một menu đang active tại một thời điểm
   menuItems   MenuItem[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -142,8 +141,9 @@ model MenuItem {
   dishId    Int
   dish      Dish     @relation(fields: [dishId], references: [id], onDelete: Restrict, onUpdate: NoAction)
   price     Int
-  status    String   @default("Active")  // ← THÊM: Active, Hidden
+  status    String   @default("Available")  // ← THÊM: Available, OutOfStock, Hidden
   notes     String?
+  dishSnapshots    DishSnapshot[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

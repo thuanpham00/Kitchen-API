@@ -1,5 +1,5 @@
 import envConfig from '@/config'
-import { DishStatus, OrderStatus, Role, TableStatus } from '@/constants/type'
+import { DishStatus, MenuItemStatus, OrderStatus, Role, TableStatus } from '@/constants/type'
 import prisma from '@/database'
 import { GuestCreateOrdersBodyType, GuestLoginBodyType } from '@/schemaValidations/guest.schema'
 import { TokenPayload } from '@/types/jwt.types'
@@ -143,33 +143,44 @@ export const guestCreateOrdersController = async (guestId: number, body: GuestCr
     }
     const orders = await Promise.all(
       body.map(async (order) => {
-        const dish = await tx.dish.findUniqueOrThrow({
+        const menuItem = await tx.menuItem.findUniqueOrThrow({
           where: {
-            id: order.dishId
+            id: order.menuItemId
+          },
+          include: {
+            dish: true
           }
         })
-        if (dish.status === DishStatus.Unavailable) {
-          throw new Error(`Món ${dish.name} đã hết`)
+
+        // Kiểm tra trạng thái MenuItem
+        if (menuItem.status === MenuItemStatus.HIDDEN) {
+          throw new Error(`Món ăn không khả dụng trong menu`)
         }
-        if (dish.status === DishStatus.Hidden) {
-          throw new Error(`Món ${dish.name} không thể đặt`)
+        if (menuItem.status === MenuItemStatus.OUT_OF_STOCK) {
+          throw new Error(`Món ăn tạm thời hết hàng`)
+        }
+
+        // Kiểm tra trạng thái Dish gốc
+        const dish = menuItem.dish
+        if (dish.status === DishStatus.Discontinued) {
+          throw new Error(`Món ${dish.name} đã ngừng phục vụ`)
         }
         const dishSnapshot = await tx.dishSnapshot.create({
           data: {
+            name: dish.name,
             description: dish.description,
             image: dish.image,
-            name: dish.name,
-            price: dish.price,
-            dishId: dish.id,
-            status: dish.status
+            status: menuItem.status,
+            price: menuItem.price, // LẤY GIÁ TẠI THỜI ĐIỂM ĐẶT - dùng giá trong menuItem - ko dùng giá gốc món ăn
+            menuItemId: menuItem.id
           }
         })
         const orderRecord = await tx.order.create({
           data: {
-            dishSnapshotId: dishSnapshot.id,
             guestId,
-            quantity: order.quantity,
             tableNumber: guest.tableNumber,
+            dishSnapshotId: dishSnapshot.id,
+            quantity: order.quantity,
             orderHandlerId: null,
             status: OrderStatus.Pending
           },

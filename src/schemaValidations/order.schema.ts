@@ -1,4 +1,4 @@
-import { DishStatusValues, OrderStatusValues } from '@/constants/type'
+import { DishStatusValues, MenuItemStatusValues, OrderStatusValues } from '@/constants/type'
 import { AccountSchema } from '@/schemaValidations/account.schema'
 import { TableSchema } from '@/schemaValidations/table.schema'
 import z from 'zod'
@@ -9,11 +9,12 @@ const DishSnapshotSchema = z.object({
   price: z.number(),
   image: z.string(),
   description: z.string(),
-  status: z.enum(DishStatusValues),
-  dishId: z.number().nullable(),
+  status: z.enum(MenuItemStatusValues),
+  menuItemId: z.number().nullable(),
   createdAt: z.date(),
   updatedAt: z.date()
 })
+
 export const OrderSchema = z.object({
   id: z.number(),
   guestId: z.number().nullable(),
@@ -39,7 +40,7 @@ export const OrderSchema = z.object({
 
 export const UpdateOrderBody = z.object({
   status: z.enum(OrderStatusValues),
-  dishId: z.number(),
+  menuItemId: z.number(),
   quantity: z.number()
 })
 
@@ -96,7 +97,7 @@ export const CreateOrdersBody = z
     guestId: z.number(),
     orders: z.array(
       z.object({
-        dishId: z.number(),
+        menuItemId: z.number(),
         quantity: z.number()
       })
     )

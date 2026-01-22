@@ -1,25 +1,25 @@
-import { createDishCategory, deleteDishCategory, updateDishCategory } from '@/controllers/dishCategory.controller'
 import {
   addMenuItemToMenu,
+  createMenu,
+  deleteMenu,
+  deleteMenuItem,
   getMenuDetail,
+  getMenuIsActive,
+  getMenuItemDetail,
   getMenuItemFromMenu,
   getMenuList,
+  updateDishInMenu,
   updateMenu
 } from '@/controllers/menu.controller'
 import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
-  CreateDishCategoryBody,
-  CreateDishCategoryBodyType,
-  DishCategoryParams,
-  DishCategoryParamsType,
-  DishCategoryRes,
-  DishCategoryResType,
-  UpdateDishCategoryBody,
-  UpdateDishCategoryBodyType
-} from '@/schemaValidations/dishCategory.schema'
-import {
   AddDishToMenu,
   AddDishToMenuType,
+  CreateMenuBody,
+  CreateMenuBodyType,
+  MenuActive,
+  MenuActiveRes,
+  MenuActiveResType,
   MenuItemListRes,
   MenuItemListResType,
   MenuItemRes,
@@ -32,6 +32,8 @@ import {
   MenuQueryType,
   MenuRes,
   MenuResType,
+  UpdateDishInMenu,
+  UpdateDishInMenuType,
   UpdateMenuBody,
   UpdateMenuBodyType
 } from '@/schemaValidations/menu.schema'
@@ -65,6 +67,25 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     }
   ),
     fastify.get<{
+      Reply: MenuActiveResType
+    }>(
+      '/active',
+      {
+        schema: {
+          response: {
+            200: MenuActiveRes
+          }
+        }
+      },
+      async (request, reply) => {
+        const data = await getMenuIsActive()
+        reply.send({
+          data: data as MenuActiveResType['data'],
+          message: 'Lấy menu đang kích hoạt thành công!'
+        })
+      }
+    ),
+    fastify.get<{
       Params: MenuParamsType
       Reply: MenuResType
     }>(
@@ -87,15 +108,15 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     )
 
   fastify.post<{
-    Body: CreateDishCategoryBodyType
-    Reply: DishCategoryResType
+    Body: CreateMenuBodyType
+    Reply: MenuResType
   }>(
     '',
     {
       schema: {
-        body: CreateDishCategoryBody,
+        body: CreateMenuBody,
         response: {
-          200: DishCategoryRes
+          200: MenuRes
         }
       },
       preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
@@ -103,10 +124,10 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
       })
     },
     async (request, reply) => {
-      const dishCategory = await createDishCategory(request.body)
+      const menu = await createMenu(request.body)
       reply.send({
-        data: dishCategory as DishCategoryResType['data'],
-        message: 'Tạo danh mục món ăn thành công!'
+        data: menu as MenuResType['data'],
+        message: 'Tạo menu thành công!'
       })
     }
   )
@@ -140,15 +161,15 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
   )
 
   fastify.delete<{
-    Params: DishCategoryParamsType
-    Reply: DishCategoryResType
+    Params: MenuParamsType
+    Reply: MenuResType
   }>(
     '/:id',
     {
       schema: {
-        params: DishCategoryParams,
+        params: MenuParams,
         response: {
-          200: DishCategoryRes
+          200: MenuRes
         }
       },
       preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
@@ -156,14 +177,14 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
       })
     },
     async (request, reply) => {
-      const result = await deleteDishCategory(request.params.id)
+      const result = await deleteMenu(request.params.id)
       reply.send({
-        message: 'Xóa danh mục món ăn thành công!',
-        data: result as DishCategoryResType['data']
+        message: 'Xóa menu thành công!',
+        data: result as MenuResType['data']
       })
     }
   )
-
+  // lấy danh sách món ăn trong menu
   fastify.get<{
     Params: MenuParamsType
     Reply: MenuItemListResType
@@ -186,24 +207,107 @@ export default async function menusRoutes(fastify: FastifyInstance, options: Fas
     }
   )
 
-  fastify.post<{
-    Body: AddDishToMenuType
+  // lấy chi tiết menuItem
+  fastify.get<{
+    Params: MenuParamsType
     Reply: MenuItemResType
   }>(
-    '/add-menu-item',
+    '/menu-item/:id',
     {
       schema: {
-        body: AddDishToMenu,
+        params: MenuParams,
         response: {
           200: MenuItemRes
         }
       }
     },
     async (request, reply) => {
+      const menuItem = await getMenuItemDetail(request.params.id)
+      console.log(menuItem)
+      console.log(request.params.id)
+      reply.send({
+        data: menuItem as MenuItemResType['data'],
+        message: 'Lấy chi tiết món ăn trong menu thành công!'
+      })
+    }
+  )
+
+  // thêm món ăn vào menu
+  fastify.post<{
+    Body: AddDishToMenuType
+    Reply: MenuItemResType
+  }>(
+    '/menu-item',
+    {
+      schema: {
+        body: AddDishToMenu,
+        response: {
+          200: MenuItemRes
+        }
+      },
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+        relation: 'and'
+      })
+    },
+    async (request, reply) => {
       const menuItemList = await addMenuItemToMenu(request.body)
       reply.send({
         data: menuItemList as MenuItemResType['data'],
         message: 'Thêm món ăn vào menu thành công!'
+      })
+    }
+  )
+
+  // cập nhật món ăn trong menu
+  fastify.put<{
+    Params: MenuParamsType
+    Body: UpdateDishInMenuType
+    Reply: MenuItemResType
+  }>(
+    '/menu-item/:id',
+    {
+      schema: {
+        params: MenuParams,
+        body: UpdateDishInMenu,
+        response: {
+          200: MenuItemRes
+        }
+      },
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+        relation: 'and'
+      })
+    },
+    async (request, reply) => {
+      const menuItemList = await updateDishInMenu(request.params.id, request.body)
+      reply.send({
+        data: menuItemList as MenuItemResType['data'],
+        message: 'Cập nhật món ăn trong menu thành công!'
+      })
+    }
+  )
+
+  // xóa món ăn trong menu
+  fastify.delete<{
+    Params: MenuParamsType
+    Reply: MenuItemResType
+  }>(
+    '/menu-item/:id',
+    {
+      schema: {
+        params: MenuParams,
+        response: {
+          200: MenuItemRes
+        }
+      },
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+        relation: 'and'
+      })
+    },
+    async (request, reply) => {
+      const result = await deleteMenuItem(request.params.id)
+      reply.send({
+        message: 'Xóa món ăn trong menu thành công!',
+        data: result as MenuItemResType['data']
       })
     }
   )

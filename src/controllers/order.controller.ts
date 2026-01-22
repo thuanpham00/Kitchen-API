@@ -1,4 +1,4 @@
-import { DishStatus, OrderStatus, TableStatus } from '@/constants/type'
+import { DishStatus, MenuItemStatus, OrderStatus, TableStatus } from '@/constants/type'
 import prisma from '@/database'
 import { CreateOrdersBodyType, UpdateOrderBodyType } from '@/schemaValidations/order.schema'
 
@@ -25,25 +25,37 @@ export const createOrdersController = async (orderHandlerId: number, body: Creat
     prisma.$transaction(async (tx) => {
       const ordersRecord = await Promise.all(
         orders.map(async (order) => {
-          const dish = await tx.dish.findUniqueOrThrow({
+          const menuItem = await tx.menuItem.findUniqueOrThrow({
             where: {
-              id: order.dishId
+              id: order.menuItemId
+            },
+            include: {
+              dish: true
             }
           })
-          if (dish.status === DishStatus.Unavailable) {
-            throw new Error(`Món ${dish.name} đã hết`)
+
+          // Kiểm tra trạng thái MenuItem
+          if (menuItem.status === MenuItemStatus.HIDDEN) {
+            throw new Error(`Món ăn không khả dụng trong menu`)
           }
-          if (dish.status === DishStatus.Hidden) {
-            throw new Error(`Món ${dish.name} không thể đặt`)
+          if (menuItem.status === MenuItemStatus.OUT_OF_STOCK) {
+            throw new Error(`Món ăn tạm thời hết hàng`)
           }
+
+          // Kiểm tra trạng thái Dish gốc
+          const dish = menuItem.dish
+          if (dish.status === DishStatus.Discontinued) {
+            throw new Error(`Món ${dish.name} đã ngừng phục vụ`)
+          }
+
           const dishSnapshot = await tx.dishSnapshot.create({
             data: {
               description: dish.description,
               image: dish.image,
               name: dish.name,
-              price: dish.price,
-              dishId: dish.id,
-              status: dish.status
+              price: menuItem.price,
+              menuItemId: menuItem.id,
+              status: menuItem.status
             }
           })
           const orderRecord = await tx.order.create({
@@ -178,9 +190,9 @@ export const updateOrderController = async (
   orderId: number,
   body: UpdateOrderBodyType & { orderHandlerId: number }
 ) => {
-  const { status, dishId, quantity, orderHandlerId } = body
+  const { status, menuItemId, quantity, orderHandlerId } = body
   const result = await prisma.$transaction(async (tx) => {
-    const order = await prisma.order.findUniqueOrThrow({
+    const order = await tx.order.findUniqueOrThrow({
       where: {
         id: orderId
       },
@@ -188,25 +200,52 @@ export const updateOrderController = async (
         dishSnapshot: true
       }
     })
+
+    // Không cho phép cập nhật order đã bị từ chối
+    if (order.status === OrderStatus.Rejected) {
+      throw new Error('Không thể cập nhật đơn hàng đã bị từ chối')
+    }
+
     let dishSnapshotId = order.dishSnapshotId
-    if (order.dishSnapshot.dishId !== dishId) {
-      const dish = await tx.dish.findUniqueOrThrow({
+
+    // Nếu thay đổi món ăn, tạo dishSnapshot mới từ menuItem
+    if (menuItemId && order.dishSnapshot.menuItemId !== menuItemId) {
+      const menuItem = await tx.menuItem.findUniqueOrThrow({
         where: {
-          id: dishId
+          id: menuItemId
+        },
+        include: {
+          dish: true
         }
       })
+
+      // Kiểm tra trạng thái MenuItem
+      if (menuItem.status === MenuItemStatus.HIDDEN) {
+        throw new Error(`Món ăn không khả dụng trong menu`)
+      }
+      if (menuItem.status === MenuItemStatus.OUT_OF_STOCK) {
+        throw new Error(`Món ăn tạm thời hết hàng`)
+      }
+
+      // Kiểm tra trạng thái Dish gốc
+      const dish = menuItem.dish
+      if (dish.status === DishStatus.Discontinued) {
+        throw new Error(`Món ${dish.name} đã ngừng phục vụ`)
+      }
+
       const dishSnapshot = await tx.dishSnapshot.create({
         data: {
           description: dish.description,
           image: dish.image,
           name: dish.name,
-          price: dish.price,
-          dishId: dish.id,
-          status: dish.status
+          price: menuItem.price,
+          menuItemId: menuItem.id,
+          status: menuItem.status
         }
       })
       dishSnapshotId = dishSnapshot.id
     }
+
     const newOrder = await tx.order.update({
       where: {
         id: orderId

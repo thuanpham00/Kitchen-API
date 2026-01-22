@@ -4,7 +4,8 @@ import z from 'zod'
 
 export const TableQuery = BaseQuery.and(
   z.object({
-    number: z.string().trim().max(256).optional()
+    number: z.string().trim().max(256).optional(),
+    pagination: z.string().optional()
   })
 )
 
@@ -37,7 +38,7 @@ export type TableResType = z.TypeOf<typeof TableRes>
 export const TableListRes = z.object({
   data: z.array(TableSchema),
   message: z.string(),
-  pagination: PaginationRes
+  pagination: PaginationRes.nullable()
 })
 
 export type TableListResType = z.TypeOf<typeof TableListRes>

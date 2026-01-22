@@ -34,11 +34,12 @@ export default async function tablesRoutes(fastify: FastifyInstance, options: Fa
       const { data, pagination } = await getTableList({
         page: request.query.page || 1,
         limit: request.query.limit || 5,
-        number: request.query.number
+        number: request.query.number,
+        pagination: request.query.pagination
       })
       reply.send({
         data: data as TableListResType['data'],
-        pagination: pagination,
+        pagination: pagination || null,
         message: 'Lấy danh sách bàn thành công!'
       })
     }

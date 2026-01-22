@@ -2,7 +2,6 @@ import prisma from '@/database'
 import { CreateDishBodyType, DishQueryType, UpdateDishBodyType } from '@/schemaValidations/dish.schema'
 
 export const getDishList = async ({ page, limit, name, categoryId, pagination }: DishQueryType) => {
-  console.log(pagination)
   if (pagination === 'false') {
     const dishes = await prisma.dish.findMany({
       orderBy: { createdAt: 'desc' },
@@ -121,7 +120,16 @@ export const updateDish = (id: number, data: UpdateDishBodyType) => {
   })
 }
 
-export const deleteDish = (id: number) => {
+export const deleteDish = async (id: number) => {
+  // check coi món ăn này có trong menuItem nào ko
+  const menuItems = await prisma.menuItem.findFirst({
+    where: {
+      dishId: id
+    }
+  })
+  if (menuItems) {
+    throw new Error('Món ăn này đang có trong menu, không thể xóa!')
+  }
   return prisma.dish.delete({
     where: {
       id

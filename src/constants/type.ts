@@ -14,12 +14,11 @@ export const Role = {
 export const RoleValues = [Role.Owner, Role.Employee, Role.Guest] as const
 
 export const DishStatus = {
-  Available: 'Available',
-  Unavailable: 'Unavailable',
-  Hidden: 'Hidden'
+  Active: 'Active', // Món đang hoạt động (có thể thêm vào menu)
+  Discontinued: 'Discontinued' // Món ngừng phục vụ (không thêm vào menu được nữa)
 } as const
 
-export const DishStatusValues = [DishStatus.Available, DishStatus.Unavailable, DishStatus.Hidden] as const
+export const DishStatusValues = [DishStatus.Active, DishStatus.Discontinued] as const
 
 export const TableStatus = {
   Available: 'Available',
@@ -47,4 +46,10 @@ export const OrderStatusValues = [
 
 export const ManagerRoom = 'manager' as const
 
-export const MenuItemStatusValues = ['AVAILABLE', 'OUT_OF_STOCK', 'HIDDEN'] as const
+export const MenuItemStatus = {
+  AVAILABLE: 'Available', // Đang bán trong menu
+  OUT_OF_STOCK: 'OutOfStock', // Tạm hết hàng
+  HIDDEN: 'Hidden' // Ẩn khỏi menu này
+} as const
+
+export const MenuItemStatusValues = ['Available', 'OutOfStock', 'Hidden'] as const

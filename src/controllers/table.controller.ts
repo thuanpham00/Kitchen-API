@@ -3,7 +3,17 @@ import { CreateTableBodyType, TableQueryType, UpdateTableBodyType } from '@/sche
 import { EntityError, isPrismaClientKnownRequestError } from '@/utils/errors'
 import { randomId } from '@/utils/helpers'
 
-export const getTableList = async ({ page, limit, number }: TableQueryType) => {
+export const getTableList = async ({ page, limit, number, pagination }: TableQueryType) => {
+  if (pagination === 'false') {
+    const tables = await prisma.table.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
+    return {
+      data: tables,
+      pagination: null
+    }
+  }
+
   const skip = (page - 1) * limit
 
   // ✅ Lấy tất cả tables, filter trong memory

@@ -1,6 +1,11 @@
 import { DishStatus } from '@/constants/type'
 import prisma from '@/database'
-import { AddDishToMenuType, MenuQueryType, UpdateMenuBodyType } from '@/schemaValidations/menu.schema'
+import {
+  AddDishToMenuType,
+  MenuQueryType,
+  UpdateDishInMenuType,
+  UpdateMenuBodyType
+} from '@/schemaValidations/menu.schema'
 
 export const getMenuList = async ({ page, limit, name }: MenuQueryType) => {
   const skip = (page - 1) * limit
@@ -46,39 +51,36 @@ export const getMenuList = async ({ page, limit, name }: MenuQueryType) => {
   }
 }
 
-// export const getListNameDishCategory = async () => {
-//   const categories = await prisma.dishCategory.findMany({
-//     select: { id: true, name: true },
-//     orderBy: { name: 'desc' }
-//   })
-//   return categories
-// }
-
-// export const createDishCategory = async (data: CreateDishCategoryBodyType) => {
-//   const category = await prisma.dishCategory.create({
-//     data,
-//     include: {
-//       _count: {
-//         select: { dishes: true }
-//       }
-//     }
-//   })
-
-//   return {
-//     id: category.id,
-//     name: category.name,
-//     description: category.description,
-//     countDish: category._count.dishes,
-//     createdAt: category.createdAt,
-//     updatedAt: category.updatedAt
-//   }
-// }
+export const getMenuIsActive = async () => {
+  return prisma.menu.findFirst({
+    where: {
+      isActive: true
+    },
+    include: {
+      menuItems: {
+        include: {
+          dish: {
+            include: {
+              category: true
+            }
+          }
+        }
+      }
+    }
+  })
+}
 
 export const getMenuDetail = (id: number) => {
   return prisma.menu.findUniqueOrThrow({
     where: {
       id
     }
+  })
+}
+
+export const createMenu = (data: UpdateMenuBodyType) => {
+  return prisma.menu.create({
+    data
   })
 }
 
@@ -101,37 +103,47 @@ export const updateMenu = (id: number, data: UpdateMenuBodyType) => {
         where: {
           id
         },
-        data
+        data: {
+          ...data,
+          version: { increment: 1 }
+        }
       })
     })
   }
-
+  // tăng version lên 1 mỗi khi cập nhật
   return prisma.menu.update({
     where: {
       id
     },
-    data
+
+    data: {
+      ...data,
+      version: { increment: 1 }
+    }
   })
 }
 
-// export const deleteDishCategory = async (id: number) => {
-//   // Kiểm tra danh mục có món ăn không
-//   const dishCount = await prisma.dish.count({
-//     where: {
-//       categoryId: id
-//     }
-//   })
-
-//   if (dishCount > 0) {
-//     throw new Error(`Không thể xóa danh mục này vì còn ${dishCount} món ăn đang thuộc danh mục`)
-//   }
-
-//   return prisma.dishCategory.delete({
-//     where: {
-//       id
-//     }
-//   })
-// }
+export const deleteMenu = async (id: number) => {
+  const checkStatusMenu = await prisma.menu.findFirst({
+    where: {
+      id
+    }
+  })
+  if (checkStatusMenu?.isActive) {
+    throw new Error('Không thể xóa menu đang được kích hoạt!')
+  }
+  // xóa các menuItem thuộc menu này trước
+  await prisma.menuItem.deleteMany({
+    where: {
+      menuId: id
+    }
+  })
+  return prisma.menu.delete({
+    where: {
+      id
+    }
+  })
+}
 
 export const getMenuItemFromMenu = async (menuId: number) => {
   const list = await prisma.menuItem.findMany({
@@ -152,6 +164,21 @@ export const getMenuItemFromMenu = async (menuId: number) => {
   }
 }
 
+export const getMenuItemDetail = async (menuItemId: number) => {
+  return await prisma.menuItem.findFirst({
+    where: {
+      id: menuItemId
+    },
+    include: {
+      dish: {
+        include: {
+          category: true
+        }
+      }
+    }
+  })
+}
+
 export const addMenuItemToMenu = async (data: AddDishToMenuType) => {
   const findDish = await prisma.dish.findFirst({
     where: {
@@ -159,8 +186,8 @@ export const addMenuItemToMenu = async (data: AddDishToMenuType) => {
     }
   })
 
-  if (!findDish || findDish.status === DishStatus.Hidden) {
-    throw new Error('Món ăn không tồn tại!')
+  if (!findDish || findDish.status === DishStatus.Discontinued) {
+    throw new Error('Món ăn tạm ngưng!')
   }
 
   if (data.price <= findDish?.price) {
@@ -180,6 +207,69 @@ export const addMenuItemToMenu = async (data: AddDishToMenuType) => {
 
   return prisma.menuItem.create({
     data,
+    include: {
+      dish: {
+        include: {
+          category: true
+        }
+      }
+    }
+  })
+}
+
+export const updateDishInMenu = async (id: number, data: UpdateDishInMenuType) => {
+  const findDish = await prisma.dish.findFirst({
+    where: {
+      id: data.dishId
+    }
+  })
+
+  if (!findDish || findDish.status === DishStatus.Discontinued) {
+    throw new Error('Món ăn tạm ngưng!')
+  }
+
+  if (data.price <= findDish?.price) {
+    throw new Error('Giá món ăn trong menu phải cao hơn giá gốc của món ăn!')
+  }
+
+  const findMenuItem = await prisma.menuItem.findFirst({
+    where: {
+      id
+    }
+  })
+
+  const checkDishExistInMenu = await prisma.menuItem.findFirst({
+    where: {
+      dishId: data.dishId,
+      menuId: findMenuItem?.menuId,
+      id: { not: id } // loại trừ chính nó
+    }
+  })
+
+  if (checkDishExistInMenu) {
+    throw new Error('Món ăn đã tồn tại trong menu!')
+  }
+
+  return prisma.menuItem.update({
+    where: {
+      id
+    },
+    data,
+    include: {
+      dish: {
+        include: {
+          category: true
+        }
+      }
+    }
+  })
+}
+
+export const deleteMenuItem = async (id: number) => {
+  return prisma.menuItem.delete({
+    where: {
+      id
+    },
     include: {
       dish: {
         include: {
