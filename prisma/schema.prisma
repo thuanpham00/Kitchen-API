@@ -45,6 +45,14 @@ model Dish {
   description   String
   image         String
   status        String         @default("Active")
+
+  dietaryTags     String?           // phân loại món ăn (chay, thuần chay, ít tinh bột) "vegetarian,vegan,low-carb"
+  spicyLevel      Int?              @default(0) // độ cay món ăn 0-3 (0 = không cay, 3 = rất cay)
+  preparationTime Int?              // Thời gian làm món (phút)
+  searchKeywords  String?           // keyword tìm kiếm "phở bò beef noodle hà nội"
+  popularity      Int?              @default(0) // Số lần order
+  dishIngredients DishIngredient[]  // Relation mới
+
   menuItems     MenuItem[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -87,6 +95,7 @@ model Table {
   capacity  Int
   orders    Order[]
   guests    Guest[]
+  guestCalls GuestCall[]
   status    String   @default("Available")
   token     String
   createdAt DateTime @default(now())
@@ -98,6 +107,12 @@ model Guest {
   name                  String
   table                 Table?    @relation(fields: [tableNumber], references: [number], onDelete: SetNull, onUpdate: NoAction)
   tableNumber           Int?
+
+  dietaryPreferences    String?       // sở thích món ăn JSON: ["vegetarian","halal"]
+  allergyInfo           String?       // dị ứng món ăn "shellfish, dairy, peanuts"
+  chatHistory           ChatHistory[] // Relation
+  guestCall             GuestCall[]   // Relation
+
   orders                Order[]
   refreshToken          String?
   refreshTokenExpiresAt DateTime?
@@ -148,4 +163,73 @@ model MenuItem {
   updatedAt DateTime @updatedAt
 
   @@unique([menuId, dishId])
+}
+
+model Ingredient {
+  id              Int               @id @default(autoincrement())
+  name            String            @unique // "Thịt bò"
+  description     String?
+  allergenType    String?           // "dairy,gluten,shellfish,nuts"
+  isVegetarian    Boolean           @default(false)
+  isVegan         Boolean           @default(false)
+  category        String?           // "protein,vegetable,spice"
+  image           String?
+  dishIngredients DishIngredient[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  @@index([allergenType])
+}
+
+model DishIngredient {
+  id           Int        @id @default(autoincrement())
+  dishId       Int
+  dish         Dish       @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  quantity     String?    // "200", "2"
+  unit         String?    // "grams", "pieces"
+  isOptional   Boolean    @default(false) // Có thể bỏ qua
+  isMain       Boolean    @default(false) // Nguyên liệu chính
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  @@unique([dishId, ingredientId])
+  @@index([dishId])
+  @@index([ingredientId])
+}
+
+model ChatHistory {
+  id              Int      @id @default(autoincrement())
+  sessionId       String   // UUID browser session
+  guestId         Int?
+  guest           Guest?   @relation(fields: [guestId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  message         String   // Tin nhắn user
+  response        String   // Phản hồi AI
+  intent          String?  // "search_dish", "order_dish"
+  extractedData   String?  // JSON
+  suggestedDishes String?  // JSON: [dishId1, dishId2]
+  responseTimeMs  Int?     // Performance tracking
+  aiTokensUsed    Int?     // Chi phí API
+  createdAt       DateTime @default(now())
+  
+  @@index([sessionId])
+  @@index([guestId])
+  @@index([createdAt])
+}
+
+model GuestCall {
+  id          Int      @id @default(autoincrement())
+  guestId     Int?
+  guest       Guest?   @relation(fields: [guestId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  tableNumber Int?
+  table       Table?   @relation(fields: [tableNumber], references: [number], onDelete: SetNull, onUpdate: NoAction)
+  status      String   @default("Pending") // "Pending", "Completed", 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([guestId])
+  @@index([tableNumber])
+  @@index([status])
+  @@index([createdAt])
 }

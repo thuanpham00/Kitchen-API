@@ -34,6 +34,12 @@ Table Dish {
   description String [not null]
   image String [not null]
   status String [not null, default: 'Active']
+  dietaryTags String
+  spicyLevel Int [default: 0]
+  preparationTime Int
+  searchKeywords String
+  popularity Int [default: 0]
+  dishIngredients DishIngredient [not null]
   menuItems MenuItem [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -76,6 +82,7 @@ Table Table {
   capacity Int [not null]
   orders Order [not null]
   guests Guest [not null]
+  guestCalls GuestCall [not null]
   status String [not null, default: 'Available']
   token String [not null]
   createdAt DateTime [default: `now()`, not null]
@@ -87,6 +94,10 @@ Table Guest {
   name String [not null]
   table Table
   tableNumber Int
+  dietaryPreferences String
+  allergyInfo String
+  chatHistory ChatHistory [not null]
+  guestCall GuestCall [not null]
   orders Order [not null]
   refreshToken String
   refreshTokenExpiresAt DateTime
@@ -141,6 +152,64 @@ Table MenuItem {
   }
 }
 
+Table Ingredient {
+  id Int [pk, increment]
+  name String [unique, not null]
+  description String
+  allergenType String
+  isVegetarian Boolean [not null, default: false]
+  isVegan Boolean [not null, default: false]
+  category String
+  image String
+  dishIngredients DishIngredient [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table DishIngredient {
+  id Int [pk, increment]
+  dishId Int [not null]
+  dish Dish [not null]
+  ingredientId Int [not null]
+  ingredient Ingredient [not null]
+  quantity String
+  unit String
+  isOptional Boolean [not null, default: false]
+  isMain Boolean [not null, default: false]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+
+  indexes {
+    (dishId, ingredientId) [unique]
+  }
+}
+
+Table ChatHistory {
+  id Int [pk, increment]
+  sessionId String [not null]
+  guestId Int
+  guest Guest
+  message String [not null]
+  response String [not null]
+  intent String
+  extractedData String
+  suggestedDishes String
+  responseTimeMs Int
+  aiTokensUsed Int
+  createdAt DateTime [default: `now()`, not null]
+}
+
+Table GuestCall {
+  id Int [pk, increment]
+  guestId Int
+  guest Guest
+  tableNumber Int
+  table Table
+  status String [not null, default: 'Pending']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
 Ref: Account.ownerId > Account.id
 
 Ref: RefreshToken.accountId > Account.id [delete: Cascade]
@@ -166,3 +235,13 @@ Ref: Socket.guestId > Guest.id [delete: Set Null]
 Ref: MenuItem.menuId > Menu.id [delete: Restrict]
 
 Ref: MenuItem.dishId > Dish.id [delete: Restrict]
+
+Ref: DishIngredient.dishId > Dish.id [delete: Cascade]
+
+Ref: DishIngredient.ingredientId > Ingredient.id [delete: Cascade]
+
+Ref: ChatHistory.guestId > Guest.id [delete: Set Null]
+
+Ref: GuestCall.guestId > Guest.id [delete: Set Null]
+
+Ref: GuestCall.tableNumber > Table.number [delete: Set Null]

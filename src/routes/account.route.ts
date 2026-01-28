@@ -131,7 +131,7 @@ export default async function accountRoutes(fastify: FastifyInstance, options: F
       const body = request.body
       const { account, socketId, isChangeRole } = await updateEmployeeAccount(accountId, body)
       if (isChangeRole && socketId) {
-        fastify.io.to(socketId).emit('refresh-token', account)
+        fastify.io.to(socketId).emit('refresh-token', account) // refresh token nếu bị thay đổi role - để dùng AT và RT (role mới)
       }
       reply.send({
         data: account as AccountResType['data'],
