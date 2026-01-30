@@ -25,6 +25,7 @@ import indicatorRoutes from '@/routes/indicator.route'
 import autoRemoveRefreshTokenJob from '@/jobs/autoRemoveRefreshToken.job'
 import categoryRoutes from '@/routes/category.route'
 import menusRoutes from '@/routes/menu.route'
+import ingredientRoutes from '@/routes/ingredient.route'
 
 const fastify = Fastify({
   logger: false
@@ -72,6 +73,9 @@ const start = async () => {
     })
     fastify.register(dishRoutes, {
       prefix: '/dishes'
+    })
+    fastify.register(ingredientRoutes, {
+      prefix: '/ingredients'
     })
     fastify.register(categoryRoutes, {
       prefix: '/dish-categories'

@@ -1,4 +1,5 @@
 import { DishStatusValues } from '@/constants/type'
+import { IngredientSchema } from '@/schemaValidations/ingredient.schema'
 import { BaseQuery, PaginationRes } from '@/schemaValidations/util.schema'
 import z from 'zod'
 
@@ -13,12 +14,18 @@ export const DishQuery = BaseQuery.and(
 export type DishQueryType = z.TypeOf<typeof DishQuery>
 
 export const CreateDishBody = z.object({
-  name: z.string().min(1).max(256),
-  price: z.coerce.number().positive(),
-  description: z.string().max(10000),
+  name: z.string().min(5).max(256),
+  price: z.number().min(1000),
+  description: z.string().max(10000).optional(),
   image: z.string().url(),
   status: z.enum(DishStatusValues).optional(),
-  categoryId: z.string()
+  categoryId: z.string(), // bắt buộc chọn
+
+  spicyLevel: z.number(),
+  preparationTime: z.number().min(1),
+  popularity: z.number().optional(),
+  dietaryTags: z.string().optional(),
+  searchKeywords: z.string().optional()
 })
 
 export type CreateDishBodyType = z.TypeOf<typeof CreateDishBody>
@@ -40,6 +47,13 @@ export const DishSchema = z.object({
     id: z.number(),
     name: z.string()
   }),
+
+  dietaryTags: z.string().nullable(),
+  spicyLevel: z.number(),
+  preparationTime: z.number(),
+  searchKeywords: z.string(),
+  popularity: z.number(),
+
   createdAt: z.date(),
   updatedAt: z.date()
 })
@@ -83,3 +97,45 @@ export const DishListWithPaginationRes = z.object({
 })
 
 export type DishListWithPaginationResType = z.TypeOf<typeof DishListWithPaginationRes>
+
+export const dishIngredientSchema = z.object({
+  id: z.number(),
+  dishId: z.number(),
+  ingredientId: z.number(),
+  ingredient: IngredientSchema,
+  quantity: z.string(),
+  unit: z.string(),
+  isOptional: z.boolean(),
+  isMain: z.boolean(),
+  createdAt: z.date(),
+  updatedAt: z.date()
+})
+
+export const DishIngredientRes = z.object({
+  data: dishIngredientSchema,
+  message: z.string()
+})
+
+export type DishIngredientResType = z.TypeOf<typeof DishIngredientRes>
+
+export const DishIngredientListRes = z.object({
+  data: z.array(dishIngredientSchema),
+  message: z.string()
+})
+
+export type DishIngredientListResType = z.TypeOf<typeof DishIngredientListRes>
+
+export const AddIngredientToDish = z.object({
+  dishId: z.number(),
+  ingredientId: z.number(),
+  quantity: z.number().min(1),
+  unit: z.string(),
+  isOptional: z.boolean().optional(),
+  isMain: z.boolean().optional()
+})
+
+export type AddIngredientToDishType = z.TypeOf<typeof AddIngredientToDish>
+
+export const UpdateIngredientInDish = AddIngredientToDish
+
+export type UpdateIngredientInDishType = z.TypeOf<typeof UpdateIngredientInDish>

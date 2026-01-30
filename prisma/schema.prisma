@@ -60,6 +60,7 @@ model Dish {
   category      DishCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
+// copy menuItem-dish tại thời điểm order đó được tạo thì dishSnapshot sẽ lưu lại thông tin món ăn
 model DishSnapshot {
   id          Int      @id @default(autoincrement())
   name        String
@@ -169,12 +170,13 @@ model Ingredient {
   id              Int               @id @default(autoincrement())
   name            String            @unique // "Thịt bò"
   description     String?
-  allergenType    String?           // "dairy,gluten,shellfish,nuts"
-  isVegetarian    Boolean           @default(false)
-  isVegan         Boolean           @default(false)
-  category        String?           // "protein,vegetable,spice"
-  image           String?
+  allergenType    String?           // các chất gây dị ứng "dairy,gluten,shellfish,nuts"
+  isVegetarian    Boolean           @default(false) // chế độ chay
+  isVegan         Boolean           @default(false) // chế độ thuần chay
+  category        String?           // phân loại nguyên liệu "protein,vegetable,spice"
+  image           String?           // hình ảnh nguyên liệu    
   dishIngredients DishIngredient[]
+  isActive        Boolean           @default(true) // nguyên liệu còn sử dụng hay không
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   
@@ -187,8 +189,8 @@ model DishIngredient {
   dish         Dish       @relation(fields: [dishId], references: [id], onDelete: Cascade)
   ingredientId Int
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  quantity     String?    // "200", "2"
-  unit         String?    // "grams", "pieces"
+  quantity     String?    // số lượng "200", "2"
+  unit         String?    // đơn vị "grams", "pieces"
   isOptional   Boolean    @default(false) // Có thể bỏ qua
   isMain       Boolean    @default(false) // Nguyên liệu chính
   createdAt    DateTime   @default(now())

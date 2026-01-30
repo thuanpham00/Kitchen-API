@@ -150,6 +150,7 @@ export const getMenuItemFromMenu = async (menuId: number) => {
     where: {
       menuId
     },
+    orderBy: { createdAt: 'desc' },
     include: {
       dish: {
         include: {

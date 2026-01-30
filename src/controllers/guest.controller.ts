@@ -165,6 +165,15 @@ export const guestCreateOrdersController = async (guestId: number, body: GuestCr
         if (dish.status === DishStatus.Discontinued) {
           throw new Error(`Món ${dish.name} đã ngừng phục vụ`)
         }
+
+        // +1 lần popularity của món ăn
+        await tx.dish.update({
+          where: { id: dish.id },
+          data: {
+            popularity: { increment: 1 }
+          }
+        })
+
         const dishSnapshot = await tx.dishSnapshot.create({
           data: {
             name: dish.name,

@@ -1,15 +1,28 @@
 import {
+  addIngredientToDish,
   createDish,
   deleteDish,
+  deleteIngredientFromDish,
   getDishDetail,
+  getDishIngredientDetail,
   getDishList,
   getDishListWithPagination,
-  updateDish
+  getIngredientDishList,
+  updateDish,
+  updateIngredientToDish
 } from '@/controllers/dish.controller'
+import { updateIngredient } from '@/controllers/ingredient.controller'
+import { addMenuItemToMenu } from '@/controllers/menu.controller'
 import { pauseApiHook, requireEmployeeHook, requireLoginedHook, requireOwnerHook } from '@/hooks/auth.hooks'
 import {
+  AddIngredientToDish,
+  AddIngredientToDishType,
   CreateDishBody,
   CreateDishBodyType,
+  DishIngredientListRes,
+  DishIngredientListResType,
+  DishIngredientRes,
+  DishIngredientResType,
   DishListRes,
   DishListResType,
   DishListWithPaginationQuery,
@@ -23,7 +36,9 @@ import {
   DishRes,
   DishResType,
   UpdateDishBody,
-  UpdateDishBodyType
+  UpdateDishBodyType,
+  UpdateIngredientInDish,
+  UpdateIngredientInDishType
 } from '@/schemaValidations/dish.schema'
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 
@@ -182,6 +197,132 @@ export default async function dishRoutes(fastify: FastifyInstance, options: Fast
       reply.send({
         message: 'Xóa món ăn thành công!',
         data: result as DishResType['data']
+      })
+    }
+  )
+
+  // lấy danh sách món ăn trong menu
+  fastify.get<{
+    Params: DishParamsType
+    Reply: DishIngredientListResType
+  }>(
+    '/:id/ingredients',
+    {
+      schema: {
+        params: DishParams,
+        response: {
+          200: DishIngredientListRes
+        }
+      }
+    },
+    async (request, reply) => {
+      const menuItemList = await getIngredientDishList(request.params.id)
+      reply.send({
+        data: menuItemList as DishIngredientListResType['data'],
+        message: 'Lấy danh sách nguyên liệu món ăn thành công!'
+      })
+    }
+  )
+
+  // lấy chi tiết menuItem
+  fastify.get<{
+    Params: DishParamsType
+    Reply: DishIngredientResType
+  }>(
+    '/ingredient-item/:id',
+    {
+      schema: {
+        params: DishParams,
+        response: {
+          200: DishIngredientRes
+        }
+      }
+    },
+    async (request, reply) => {
+      const dishIngredient = await getDishIngredientDetail(request.params.id)
+      reply.send({
+        data: dishIngredient as DishIngredientResType['data'],
+        message: 'Lấy chi tiết nguyên liệu trong món ăn thành công!'
+      })
+    }
+  )
+
+  // thêm nguyên liệu vào món ăn
+  fastify.post<{
+    Body: AddIngredientToDishType
+    Reply: DishIngredientResType
+  }>(
+    '/ingredient-item',
+    {
+      schema: {
+        body: AddIngredientToDish,
+        response: {
+          200: DishIngredientRes
+        }
+      },
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+        relation: 'and'
+      })
+    },
+    async (request, reply) => {
+      const menuItemList = await addIngredientToDish(request.body)
+      reply.send({
+        data: menuItemList as DishIngredientResType['data'],
+        message: 'Thêm nguyên liệu vào món ăn thành công!'
+      })
+    }
+  )
+
+  // cập nhật nguyên liệu trong món ăn
+  fastify.put<{
+    Params: DishParamsType
+    Body: UpdateIngredientInDishType
+    Reply: DishIngredientResType
+  }>(
+    '/ingredient-item/:id',
+    {
+      schema: {
+        params: DishParams,
+        body: UpdateIngredientInDish,
+        response: {
+          200: DishIngredientRes
+        }
+      },
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+        relation: 'and'
+      })
+    },
+    async (request, reply) => {
+      const menuItemList = await updateIngredientToDish(request.params.id, request.body)
+      reply.send({
+        data: menuItemList as DishIngredientResType['data'],
+        message: 'Cập nhật nguyên liệu trong món ăn thành công!'
+      })
+    }
+  )
+
+  // xóa món ăn trong menu
+  fastify.delete<{
+    Params: DishParamsType
+    Reply: DishIngredientResType
+  }>(
+    '/ingredient-item/:id',
+    {
+      schema: {
+        params: DishParams,
+        response: {
+          200: DishIngredientRes
+        }
+      },
+      preValidation: fastify.auth([requireLoginedHook, pauseApiHook, [requireOwnerHook, requireEmployeeHook]], {
+        relation: 'and'
+      })
+    },
+    async (request, reply) => {
+      const result = await deleteIngredientFromDish(request.params.id)
+      reply.send({
+        message: 'Xóa nguyên liệu trong món ăn thành công!',
+        data: result as DishIngredientResType['data']
       })
     }
   )
